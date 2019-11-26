@@ -263,16 +263,13 @@ EigenMesh3D &EigenMesh3D::operator=(const EigenMesh3D &other)
 }
 
 EigenMesh3D::hit_result
-EigenMesh3D::query_ray_hit(const Vec3d &s,
-                           const Vec3d &dir,
-                           const std::vector<DrainHole>* holes
-                          ) const
+EigenMesh3D::query_ray_hit(const Vec3d &s, const Vec3d &dir) const
 {
     assert(is_approx(dir.norm(), 1.));
     igl::Hit hit;
     hit.t = std::numeric_limits<float>::infinity();
 
-    if (! holes) {
+    if (m_holes.empty()) {
         m_aabb->intersect_ray(m_V, m_F, s, dir, hit);
         hit_result ret(*this);
         ret.m_t = double(hit.t);
@@ -286,7 +283,7 @@ EigenMesh3D::query_ray_hit(const Vec3d &s,
     else {
         // If there are holes, the hit_results will be made by
         // query_ray_hits (object) and filter_hits (holes):
-        return filter_hits(query_ray_hits(s, dir), *holes);
+        return filter_hits(query_ray_hits(s, dir));
     }
 }
 
@@ -316,13 +313,13 @@ EigenMesh3D::query_ray_hits(const Vec3d &s, const Vec3d &dir) const
 }
 
 EigenMesh3D::hit_result EigenMesh3D::filter_hits(
-                     const std::vector<EigenMesh3D::hit_result>& object_hits,
-                     const std::vector<DrainHole>& holes) const
+                     const std::vector<EigenMesh3D::hit_result>& object_hits) const
 {
     hit_result out(*this);
-    out.m_t = std::nan("");
+    out.m_t = std::numeric_limits<double>::infinity();
 
-    if (! holes.empty() && ! object_hits.empty()) {
+    if (! m_holes.empty() && ! object_hits.empty()) {
+
         Vec3d s = object_hits.front().source();
         Vec3d dir = object_hits.front().direction();
 
@@ -336,7 +333,7 @@ EigenMesh3D::hit_result EigenMesh3D::filter_hits(
         std::vector<HoleHit> hole_isects;
 
         // Collect hits on all holes, preserve information about entry/exit
-        for (const sla::DrainHole& hole : holes) {
+        for (const sla::DrainHole& hole : m_holes) {
             std::array<std::pair<float, Vec3d>, 2> isects;
             if (hole.get_intersections(s.cast<float>(),
                                        dir.cast<float>(), isects)) {

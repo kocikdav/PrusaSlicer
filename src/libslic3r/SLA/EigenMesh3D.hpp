@@ -2,6 +2,7 @@
 #define SLA_EIGENMESH3D_H
 
 #include <libslic3r/SLA/Common.hpp>
+#include "libslic3r/SLA/Hollowing.hpp"
 
 namespace Slic3r {
 
@@ -10,7 +11,6 @@ class TriangleMesh;
 namespace sla {
 
 struct Contour3D;
-struct DrainHole;
 
 /// An index-triangle structure for libIGL functions. Also serves as an
 /// alternative (raw) input format for the SLASupportTree.
@@ -76,22 +76,24 @@ public:
         }
         
         inline bool is_inside() const {
-            return normal().dot(m_dir) > 0;
+            return is_hit() && normal().dot(m_dir) > 0;
         }
     };
     
+    void load_holes(const std::vector<DrainHole>& holes) {
+        m_holes = holes;
+    }
+
+    std::vector<DrainHole> m_holes;
     // Casting a ray on the mesh, returns the distance where the hit occures.
-    hit_result query_ray_hit(const Vec3d &s,
-                             const Vec3d &dir,
-                             const std::vector<DrainHole>* holes = nullptr) const;
+    hit_result query_ray_hit(const Vec3d &s, const Vec3d &dir) const;
     
     // Casts a ray on the mesh and returns all hits
     std::vector<hit_result> query_ray_hits(const Vec3d &s, const Vec3d &dir) const;
 
     // Iterates over hits and holes and returns the true hit, possibly
     // on the inside of a hole.
-    hit_result filter_hits(const std::vector<EigenMesh3D::hit_result>& obj_hits,
-                           const std::vector<DrainHole>& holes) const;
+    hit_result filter_hits(const std::vector<EigenMesh3D::hit_result>& obj_hits) const;
 
     class si_result {
         double m_value;
